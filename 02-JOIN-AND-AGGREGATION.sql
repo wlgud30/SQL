@@ -199,4 +199,51 @@ JOIN
 ON 
     emp.manager_id = man.employee_id;
     
+----------------
+--AGGREGATION (집계)
+--------------
+--여러개의 값을 집계하여 하나의 결과값을 산출
+--COUNT : 숫자 세기 함수
+SELECT
+    COUNT(*)
+FROM
+    employees;      --전체 레코드 카운트
     
+SELECT
+    COUNT(commission_pct)
+FROM    
+    employees; -- 특정 컬럼을 명시하면 null 인 것은 집계에서 제외
+
+
+SELECT
+count(*) 
+from employees 
+where commission_pct is not null; -- 위의것과같은의미
+
+--사원들이 받는 급여의 총합
+SELECT SUM(salary) FROM employees;
+--평균 급여 산정
+SELECT AVG(salary) FROM employees;
+--사원들이 받는 평균 커미션 비율
+SELECT AVG(commission_pct) FROM employees;
+SELECT AVG(nvl(commission_pct,0)) FROM employees;
+--null 이 포함된 집계는 null 값을 포함할 것인지 아닌지를 결정하고 집계
+
+--salary 의 최솟값 최대값 평균값 중앙값
+SELECT MIN(salary), MAX(salary), AVG(salary), MEDIAN(salary)
+FROM employees;
+
+--흔히 범하는 오류
+--부서의 아이디, 급여 평균을 출력하고자
+SELECT department_id, round(AVG(salary),2) FROM employees group by department_id order by department_id;
+
+--부서별 평균 급여를 산출 평균 급여가 2000이상인 부서를 출력
+SELECT
+    department_id,round(AVG(salary),2) sal
+FROM
+    employees
+ group by 
+    department_id
+HAVING
+    avg(salary) >= 2000;
+
