@@ -247,3 +247,357 @@ FROM
 HAVING
     avg(salary) >= 2000;
 
+
+--ROULLUP
+--GROUP BY 절과 함께 사용
+--GROUP BY 의 결과에 좀 더 상세한 요약을 제공하는 기능 수행(Item Subtotal)
+--부서별 급여의 합계 추출(부서아이디,직업아이디)
+SELECT
+    department_id,
+    job_id,
+    sum(salary)
+FROM
+    employees
+GROUP BY
+    department_id,job_id
+ORDER BY
+    department_id;
+
+SELECT
+    department_id,
+    job_id,
+    sum(salary)
+FROM
+    employees
+GROUP BY
+    ROLLUP(department_id,job_id);
+--cube 함수
+--CrossTable 에 대한 Summary를 함께 제공
+--ROLLUP 함수로 추출된 SubTotal에
+--COLUMN TOTAL 값을 추출할 수 있다.
+SELECT
+    department_id,
+    job_id,
+    sum(salary)
+FROM
+    employees
+GROUP BY
+    CUBE(department_id,job_id);
+    
+--SUBQUERY
+--하나의 SQL 이 다른 SQL 질의의 일부에포함되는경우
+
+--DEN 보다 급여를 많이받는사원의 이름과 급여는?
+--1. DAN이 얼마나급여를받는지 -A
+--2. A보다 많은 급여를 받는 사람은?
+SELECT salary FROM employees WHERE first_name = 'Den';
+SELECT first_name,salary FROM employees WHERE salary > 11000;
+--두개를 합친다
+SELECT
+    first_name,
+    salary
+FROM employees
+WHERE
+    salary>
+        (SELECT salary FROM employees WHERE first_name='Den');
+
+--연습
+--급여의 중앙값보다 많이 받는 직원
+SELECT
+    first_name,
+    salary
+FROM
+    employees
+WHERE
+    salary <
+        (SELECT
+            median(salary) 
+        FROM
+            employees);
+            
+--급여를 가장 적게 받는 사람의 이름, 급여,사원번호를 출력하시오
+SELECT 
+    first_name,
+    salary,
+    employee_id
+FROM
+    employees
+WHERE
+    salary = (SELECT MIN(salary) FROM EMPLOYEES);
+    
+--다중행 서브쿼리
+--서브쿼리 결과 레코드가 둘 이상인 경우 , 단순 비교 불가능
+--집합 연산에 관련된 in, any, all ,exsist 등을 이용해야 한다.
+
+--110번 부서의 직원이 받는 급여는 얼마인가
+SELECT 
+    salary
+FROM
+    employees
+WHERE
+    department_id = 110;
+
+SELECT
+    first_name,
+    salary
+FROM
+    employees
+WHERE
+    salary = (
+            SELECT
+                salary
+            FroM    
+                employees 
+            WHERE
+                department_id=110);--error :서브쿼리의 결과 레코드는 2개
+                                   -- 2개의 결과와 단일행 salary의 값을 비교할 수 없다
+
+--fix
+            
+--IN , =ANY -> OR와 비슷
+SELECT
+    first_name,
+    salary
+FROM
+    employees
+WHERE
+    salary in (SELECT salary FROM employees WHERE department_id=110);
+
+SELECT
+    first_name,
+    salary
+FROM
+    employees
+WHERE
+    salary =any 
+        (SELECT
+            salary
+        FROM
+            employees
+        WHERE 
+            department_id=110);
+
+--ALL-> AND와 비슷
+SELECT
+    first_name,
+    salary
+FROM
+    employees
+WHERE
+    salary > all(
+        SELECT
+            salary
+        FROM
+            employees
+        WHERE
+            department_id=110);
+
+SELECT
+    first_name,
+    salary
+FROM
+    employees
+WHERE
+    salary > ANY(
+        SELECT
+            salary
+        FROM
+            employees
+        WHERE
+            department_id = 110);-- -> 'salary>12008 or salary>8300' 과 동일하다
+--Correlated query
+--포함한 (outer query) , 포함된커리(inner query)가 서로 연관관계를 맺는 쿼리
+SELECT
+    first_name,
+    salary,
+    department_id
+FROM
+    employees emp -- Outer
+WHERE
+    salary > (
+        SELECT 
+            AVG(salary)
+        FROM
+            employees
+        WHERE
+            department_id = emp.department_id);
+--서브쿼리(inner query)가 수행되기 위해서는 outer 의 컬럼값이 필요하고,
+--outer query 수행이 완료되기 위해서는 서브쿼리(inner query)의 결과값이 필요하다
+
+--서브쿼리 연습
+--각 부서별로 최고 급여를 받는 사람을 출력
+SELECT 
+    department_id,
+    MAX(salary)
+FROM
+    employees
+GROUP BY
+    department_id;
+    
+SELECT 
+    department_id,
+    employee_id,
+    first_name,
+    salary
+FROM
+    employees
+WHERE
+    (department_id,salary) IN
+    (
+        SELECT department_id,max(salary)
+        FROM employees
+        GROUP BY department_id
+    )
+ORDER BY
+    department_id;
+--SUBQUERY : 임시 테이블을 생성
+SELECT
+    emp.department_id,
+    employee_id,
+    first_name,
+    emp.salary
+FROM
+    employees emp ,(SELECT
+                        department_id,max(salary) ms
+                    FROM
+                        employees
+                    GROUP BY
+                        department_id)sal   --임시테이블을 만들어서 sal이라고 별칭을 부여
+WHERE
+    emp.department_id = sal.department_id
+AND
+    emp.salary = sal.ms
+ORDER BY
+    emp.department_id,emp.employee_id;
+--correlated query 활용
+SELECT
+    emp.department_id ,
+    employee_id,
+    first_name,
+    emp.salary
+FROM 
+    employees emp
+WHERE
+    emp.salary = (
+                    SELECT
+                        MAX(salary)
+                    FROM
+                        employees 
+                    WHERE
+                        department_id = emp.department_id
+                        )
+ORDER BY
+    department_id;
+    
+--oracle 은 질의 수행 결과의 행번호를 확인할 수 있는 가상컬럼 rownum을 제공
+--2007년 입사자중 급여 순위 5위까지
+SELECT rownum,first_name,salary
+FROM employees;
+
+SELECT
+    rownum,
+    first_name,
+    salary
+FROM 
+        EMPLOYEES
+WHERE 
+    hire_date LIKE '07%' AND rownum <=5;
+    
+SELECT 
+    rownum,
+    first_name,
+    salary
+FROM    
+    employees
+WHERE 
+    hire_date LIKE '07%' 
+AND
+    rownum <=5
+ORDER BY
+    salary desc;        --rownum이 정해진 이후 정렬을 수행
+
+--TOK K 쿼리
+SELECT
+    rownum,
+    first_name,
+    salary
+FROM (
+    SELECT
+        *
+    FROM
+        employees
+    WHERE
+        hire_date LIKE '07%'
+    ORDER BY 
+        salary desc
+    )
+WHERE
+    rownum <=5;
+
+-- SET(집합)
+--UNION(합집합,중복제거)
+--UNION ALL (합집합,중복제거X)
+--INTERSECT(교집합)
+--MINUS(차집합)
+SELECT first_name,salary, hire_date FROM employees WHERE hire_date <'05/01/01';
+SELECT first_name,salary,hire_date FROM employees WHERE salary>12000;
+
+--교집합
+SELECT first_name,salary, hire_date FROM employees WHERE hire_date <'05/01/01'
+intersect
+SELECT first_name,salary,hire_date FROM employees WHERE salary>12000;
+--위와 동일
+SELECT first_name,salary,hire_date FROM employees
+WHERE hire_date<'05/01/01' and salary>12000;
+--합집합
+SELECT first_name,salary, hire_date FROM employees WHERE hire_date <'05/01/01'
+UNION
+SELECT first_name,salary,hire_date FROM employees WHERE salary>12000;
+--위와동일
+SELECT first_name,salary,hire_date FROM employees
+WHERE hire_date<'05/01/01' OR salary>12000;
+--차집합
+SELECT first_name,salary, hire_date FROM employees WHERE hire_date <'05/01/01'
+MINUS
+SELECT first_name,salary,hire_date FROM employees WHERE salary>12000;
+--입사일이 05/01/01 이전인 사람들 중 , 급여가 12000 이하인 직원들
+--위와 동일
+SELECT
+    first_name,
+    salary,
+    hire_date
+FROM
+    employees
+WHERE
+    hire_date <'05/01/01'
+AND
+    not salary>12000;
+
+--RANK 함수
+SELECT 
+    salary,
+    first_name,
+    RANK() OVER (ORDER BY salary desc) as rank,--중복될경우 중복된 수만큼 건너뜀
+    DENSE_RANK() OVER(ORDER BY salary desc) as dense_rank,--중복되어도 다음수는 그대로 진행
+    ROW_NUMBER() OVER (ORDER BY salary desc) as row_number,--순위를 매기지않고 그냥 차례대로 진행
+    rownum
+FROM 
+    employees;
+    
+--hierarchical query : 트리 형태의 구조를 호출
+--ROOT 노드 : 조건 START WITH로 설정
+--가지 : 연결하기 위한 조건을 CONNECT BY PRIOR 로 설정
+--EMPLOYEES 테이블로 조직 그리기
+--LEVEL(깊이) 이라는 가상 컬럼을 사용할 수 있다.
+
+SELECT
+    level,emp.first_name,emp.manager_id,man.first_name
+FROM
+    employees emp join employees man
+ON 
+    emp.manager_id = man.employee_id(+)
+START WITH emp.manager_id is null
+CONNECT BY PRIOR emp.employee_id = emp.manager_id
+ORDER BY
+    level;
+--위 트리 구조에 매니저의 이름도 출력

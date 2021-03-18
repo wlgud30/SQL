@@ -22,9 +22,11 @@ and emp.job_id = jb.job_id
 order by emp.employee_id;
 
 
+
+
 SELECT
     lc.location_id,
-    street_address,
+    city,
     department_name,
     department_id
 FROM 
@@ -45,7 +47,19 @@ on
     lc.location_id  = dept.location_id (+)
 ORDER BY
     lc.location_id;    
-    
+---ansi
+SELECT
+    lc.location_id,
+    city,
+    department_name,
+    department_id
+FROM 
+    locations lc  LEFT OUTER join departments dept
+ON
+    lc.location_id = dept.location_id
+ORDER BY
+    lc.location_id;
+
 SELECT
     region_name,
     country_name
@@ -87,7 +101,7 @@ ORDER BY
     coun.country_name;
     
 SELECT
-    jh.employee_id,
+    emp.employee_id,
     first_name || ' ' || last_name,
     emp.job_id,
     start_date,
